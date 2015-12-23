@@ -5,19 +5,23 @@ import s3grep
 
 
 class TestS3Grep(unittest.TestCase):
+    # aws public data set
+    url = 's3://aws-publicdatasets/common-crawl/crawl-data/' \
+          'CC-MAIN-2015-40/segment.paths.gz'
+
     def test_parse_url(self):
-        bucket, myflie = s3grep._parse_url("s3://mybucket/somepath/myfile")
+        bucket, myflie = s3grep._parse_url("s3://mybucket/myfile")
 
         self.assertEqual(bucket, "mybucket")
-        self.assertEqual(myflie, "somepath/myfile")
+        self.assertEqual(myflie, "myfile")
 
     def test_grep_a_file(self):
-        bucket, myfile = s3grep._parse_url(
-            's3://eglp-core-temp/unit_test/s3grep_test.txt')
+        bucket, myfile = s3grep._parse_url(TestS3Grep.url)
 
-        #buf = io.StringIO()
+        output = io.StringIO()
+        s3grep._grep_a_file(bucket=bucket, key=myfile,
+                            regex=r'.*1443737929054.*', output=output)
 
-        #s3grep._grep_a_file(bucket=bucket, key=myfile, regex=r'1', output=buf)
-
-        #buf.seek(0)
-        #self.assertEqual('line 1', buf.read())
+        self.assertEqual(output.getvalue(),
+                         "common-crawl/crawl-data/CC-MAIN-2015-40/segments/"
+                         "1443737929054.69/\n")

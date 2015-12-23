@@ -9,6 +9,8 @@ import urllib.parse
 
 import boto3
 
+import boto_stream
+
 logger = logging.getLogger('s3grep')
 
 
@@ -36,7 +38,6 @@ def _parse_args(argv):
                         required=True)
     parser.add_argument('-d', '--debug',
                         dest='debug',
-                        type=bool,
                         help='turn on the debug mode with high verbosity',
                         action='store_true',
                         default=False)
@@ -51,7 +52,8 @@ def _parse_args(argv):
 
 def _setup_logging(verbose: bool):
     logging.basicConfig(
-            format='%(asctime)s-%(levelname)s-%(name)s:%(lineno)d: %(message)')
+            format=
+            '%(asctime)s-%(levelname)s-%(name)s:%(lineno)d: %(message)s')
 
     l = logging.getLogger()
 
@@ -61,7 +63,7 @@ def _setup_logging(verbose: bool):
         l.setLevel(logging.INFO)
 
 
-def _grep_a_file(bucket: str, key: str, regex: str, output: io.TextIOBase):
+def _grep_a_file(bucket: str, key: str, regex: str, output: io.TextIOWrapper):
     '''
     parse the s3 file line to see if it matches the regex
     if yes, dump the line into output buffer
@@ -77,15 +79,15 @@ def _grep_a_file(bucket: str, key: str, regex: str, output: io.TextIOBase):
 
     datadict = object.get()
 
-    instream = datadict['Body']
+    instream = boto_stream.BotoStreamBody(datadict['Body'])
+    instream = io.BufferedReader(instream, buffer_size=1 * 2 ^ 20)
 
     filename, file_extension = os.path.splitext(key)
-
     if file_extension == '.gz':
         instream = gzip.GzipFile(fileobj=instream, mode='rb')
 
     for line in io.TextIOWrapper(instream):
-        if re.match(regex, line) is not None:
+        if re.search(regex, line) is not None:
             output.write(line)
 
 
