@@ -34,7 +34,8 @@ def _parse_args(argv):
     parser.add_argument('-u', '--url',
                         dest='url',
                         type=str,
-                        help='the S3 location(s) of file(s)',
+                        help='the S3 location of file(s), '
+                             'eg. s3://bucket/some-prefix',
                         required=True)
     parser.add_argument('-d', '--debug',
                         dest='debug',
@@ -63,7 +64,8 @@ def _setup_logging(verbose: bool):
         l.setLevel(logging.INFO)
 
 
-def _grep_a_file(bucket: str, key: str, regex: str, output: io.TextIOWrapper):
+def _grep_a_file(bucketstr: str, key: str, regex: str,
+                 output: io.TextIOWrapper):
     '''
     parse the s3 file line to see if it matches the regex
     if yes, dump the line into output buffer
@@ -75,20 +77,21 @@ def _grep_a_file(bucket: str, key: str, regex: str, output: io.TextIOWrapper):
     :return:
     '''
     s3 = boto3.resource('s3')
-    object = s3.Object(bucket, key)
+    bucket = s3.Bucket(bucketstr)
+    for obj in bucket.objects.filter(Prefix=key):
 
-    datadict = object.get()
+        datadict = obj.get()
 
-    instream = boto_stream.BotoStreamBody(datadict['Body'])
-    instream = io.BufferedReader(instream, buffer_size=1 * 2 ^ 20)
+        instream = boto_stream.BotoStreamBody(datadict['Body'])
+        instream = io.BufferedReader(instream, buffer_size=1 * 2 ^ 20)
 
-    filename, file_extension = os.path.splitext(key)
-    if file_extension == '.gz':
-        instream = gzip.GzipFile(fileobj=instream, mode='rb')
+        filename, file_extension = os.path.splitext(key)
+        if file_extension == '.gz':
+            instream = gzip.GzipFile(fileobj=instream, mode='rb')
 
-    for line in io.TextIOWrapper(instream):
-        if re.search(regex, line) is not None:
-            output.write(line)
+        for line in io.TextIOWrapper(instream):
+            if re.search(regex, line) is not None:
+                output.write(obj.key + ":" + line)
 
 
 def main():
@@ -96,7 +99,8 @@ def main():
     _setup_logging(args.debug)
     bucket, key = _parse_url(args.url)
 
-    _grep_a_file(bucket=bucket, key=key, regex=args.regex, output=sys.stdout)
+    _grep_a_file(bucketstr=bucket, key=key, regex=args.regex,
+                 output=sys.stdout)
 
     pass
 
