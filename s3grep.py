@@ -1,3 +1,10 @@
+"""
+The MIT License (MIT)
+Copyright (c) 2016 Kar Lun (Daniel) Ng
+
+S3Grep - regex grep on multiple (gzipped) text files on S3
+"""
+
 import argparse
 import gzip
 import io
@@ -28,8 +35,9 @@ def _parse_url(url: str) -> (str, str):
 
 def _parse_args(argv):
     parser = argparse.ArgumentParser(
-            prog=argv[0], description='s3grep to grep some pattern'
-                                      ' from files on s3')
+            prog=argv[0], description='s3grep to grep multiple (gzipped) text'
+                                      ' files on s3 specified in the url '
+                                      'argument')
 
     parser.add_argument('-u', '--url',
                         dest='url',
